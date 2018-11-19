@@ -132,9 +132,6 @@ public class MainActivity extends AppCompatActivity {
                     displayName = cursor.getString(cursor.getColumnIndex(Phone.DISPLAY_NAME));
                     phoneNumber = cursor.getString(cursor.getColumnIndex(Phone.NUMBER));
                     contactTextView.setText(displayName + "/" + phoneNumber);
-
-                    //setTriggerData();
-
                 }
                 break;
 
