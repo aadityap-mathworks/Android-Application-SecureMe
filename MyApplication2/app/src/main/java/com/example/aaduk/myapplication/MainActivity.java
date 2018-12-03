@@ -16,8 +16,6 @@ import android.os.Bundle;
 import android.telephony.SmsManager;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
 import android.view.View;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
@@ -27,14 +25,21 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.View;
+import android.hardware.*;
+import android.content.Context;
 
 import static android.provider.AlarmClock.EXTRA_MESSAGE;
 
-
 public class MainActivity extends AppCompatActivity implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener {
 
-    private TextView panic_message;
     private GestureDetectorCompat gd;
+    private SensorManager sm;
+    private float acelValue;
+    private float acelLast;
+    private float shake;
 
     public static final String EXTRA_MESSAGE = "com.example.aaduk.myapplication.MESSAGE";
     private static final int CONTACT_PICKER_RESULT = 0x00;
@@ -73,7 +78,39 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
         });
         this.gd = new GestureDetectorCompat(this, this);
         gd.setOnDoubleTapListener(this);
+
+        sm = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
+        sm.registerListener(sensorListener, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
+
+        acelValue = SensorManager.GRAVITY_EARTH;
+        acelLast = SensorManager.GRAVITY_EARTH;
+        shake = 0.00f;
     }
+
+    private final SensorEventListener sensorListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent sensorEvent) {
+            float x = sensorEvent.values[0];
+            float y = sensorEvent.values[1];
+            float z = sensorEvent.values[2];
+
+            acelLast = acelValue;
+            acelValue = (float) Math.sqrt((double)(x*x + y*y + z*z));
+            float d = acelValue - acelLast;
+            shake = shake * 0.5f + d;
+
+            if(shake > 10) {
+                 sendMessage();
+            }
+
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+        }
+    };
+
 
     @Override
     public boolean onTouchEvent(MotionEvent event){
@@ -81,15 +118,13 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
         return super.onTouchEvent(event);
     }
 
-
     @Override
     public boolean onDown(MotionEvent event){
         return true;
-        }
+    }
 
     @Override
     public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY){
-
         return true;
     }
 
@@ -100,13 +135,11 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
 
     @Override
     public boolean onSingleTapConfirmed(MotionEvent e) {
-
         return true;
     }
 
     @Override
     public boolean onDoubleTap(MotionEvent e) {
-
         return true;
     }
 
@@ -116,13 +149,12 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
         return true;
     }
 
-   @Override
+    @Override
     public void onShowPress(MotionEvent e) {
     }
 
     @Override
     public boolean onSingleTapUp(MotionEvent e) {
-
         return true;
     }
 
