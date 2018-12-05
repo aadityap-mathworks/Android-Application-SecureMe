@@ -4,8 +4,10 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.location.Location;
 import android.net.Uri;
 import android.provider.ContactsContract;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GestureDetectorCompat;
@@ -31,7 +33,13 @@ import android.view.View;
 import android.hardware.*;
 import android.content.Context;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+
 import static android.provider.AlarmClock.EXTRA_MESSAGE;
+import static com.google.android.gms.location.LocationServices.getFusedLocationProviderClient;
 
 public class MainActivity extends AppCompatActivity implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener {
 
@@ -40,17 +48,19 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
     private float acelValue;
     private float acelLast;
     private float shake;
-
     public static final String EXTRA_MESSAGE = "com.example.aaduk.myapplication.MESSAGE";
     private static final int CONTACT_PICKER_RESULT = 0x00;
     private final static int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 8888;
-    public static final String TAG = "My Application";
+    private final static int MY_PERMISSIONS_REQUEST_ACCESS_LOCATION = 8888;
     private static final int MY_PERMISSIONS_REQUEST_SEND_SMS = 8888;
+    public static final String TAG = "My Application";
     private String displayName;
     private String phoneNumber;
     private String emailAddress = "test@test.foo";
     private TextView contactTextView;
     private TextView panicMessage;
+    private FusedLocationProviderClient locationClient;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,12 +89,14 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
         this.gd = new GestureDetectorCompat(this, this);
         gd.setOnDoubleTapListener(this);
 
-        sm = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
+        sm = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         sm.registerListener(sensorListener, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
 
         acelValue = SensorManager.GRAVITY_EARTH;
         acelLast = SensorManager.GRAVITY_EARTH;
         shake = 0.00f;
+
+
     }
 
     private final SensorEventListener sensorListener = new SensorEventListener() {
@@ -184,11 +196,60 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
                 // result of the request.
             }
         } else {
-            SmsManager smsManager = SmsManager.getDefault();
-            String message = panicMessage.getText().toString();
-            smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+
+            getLocation();
+//            String message = panicMessage.getText().toString();
+//            panicMessage.setText(message);
+//            message = panicMessage.getText().toString();
+
+
         }
 
+    }
+
+    public void getLocation()
+    {
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.ACCESS_FINE_LOCATION)) {
+
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        MY_PERMISSIONS_REQUEST_ACCESS_LOCATION);
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        } else {
+            locationClient = getFusedLocationProviderClient(this);
+
+            locationClient.getLastLocation()
+                    .addOnSuccessListener(new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+
+                            String panicMsg = panicMessage.getText().toString();
+                            String finalMsg = "This is An Emergency Message.!\n"+panicMsg+ "\nMy current Location is : " +
+                                    Double.toString(location.getLatitude()) + "," +
+                                    Double.toString(location.getLongitude());
+                            panicMessage.setText(finalMsg);
+                            SmsManager smsManager = SmsManager.getDefault();
+                            smsManager.sendTextMessage(phoneNumber, null, finalMsg, null, null);
+
+                            if (location != null) {
+                                //nLocationChanged(location);
+                            }
+                        }
+                    });
+
+
+        }
     }
 
 
@@ -216,6 +277,8 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
             startActivityForResult(contactPickerIntent, CONTACT_PICKER_RESULT);
         }
     }
+
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
