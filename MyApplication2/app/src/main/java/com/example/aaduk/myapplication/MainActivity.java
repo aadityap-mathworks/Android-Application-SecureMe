@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
             float d = acelValue - acelLast;
             shake = shake * 0.5f + d;
 
-            if(shake > 10) {
+            if(shake > 25) {
                  sendMessage();
             }
 
