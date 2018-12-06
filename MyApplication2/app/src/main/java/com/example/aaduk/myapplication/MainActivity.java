@@ -254,7 +254,7 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
                             String finalMsg = "This is An Emergency Message.!\n"+panicMsg+ "\nMy current Location is : " +
                                     Double.toString(location.getLatitude()) + "," +
                                     Double.toString(location.getLongitude());
-                            panicMessage.setText(finalMsg);
+                            //panicMessage.setText(finalMsg);
                             SmsManager smsManager = SmsManager.getDefault();
                             smsManager.sendTextMessage(phoneNumber, null, finalMsg, null, null);
 
