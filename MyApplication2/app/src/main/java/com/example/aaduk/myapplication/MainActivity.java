@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.location.Location;
 import android.net.Uri;
 import android.provider.ContactsContract;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -32,6 +33,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.hardware.*;
 import android.content.Context;
+import android.widget.VideoView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -43,6 +45,8 @@ import static com.google.android.gms.location.LocationServices.getFusedLocationP
 
 public class MainActivity extends AppCompatActivity implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener {
 
+
+    static final int REQUEST_VIDEO_CAPTURE = 1;
     private GestureDetectorCompat gd;
     private SensorManager sm;
     private float acelValue;
@@ -60,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
     private TextView contactTextView;
     private TextView panicMessage;
     private FusedLocationProviderClient locationClient;
+    private VideoView mVideoView;
 
 
     @Override
@@ -77,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
             }
         });
 
+        mVideoView = findViewById(R.id.videoView);
         contactTextView = (TextView) findViewById(R.id.ContactTextView);
         panicMessage = (TextView) findViewById(R.id.panic_message);
         Button button_send = (Button) findViewById(R.id.button_send);
@@ -99,6 +105,16 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
 
     }
 
+
+
+    private void takeVideo() {
+        Intent takeVideoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        if (takeVideoIntent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(takeVideoIntent, REQUEST_VIDEO_CAPTURE);
+        }
+    }
+
+
     private final SensorEventListener sensorListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent sensorEvent) {
@@ -111,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
             float d = acelValue - acelLast;
             shake = shake * 0.5f + d;
 
-            if(shake > 25) {
+            if(shake > 20) {
                  sendMessage();
             }
 
@@ -310,7 +326,9 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
                     contactTextView.setText(displayName + "/" + phoneNumber);
                 }
                 break;
-
+            case REQUEST_VIDEO_CAPTURE:
+                Uri videoUri = data.getData();
+                mVideoView.setVideoURI(videoUri);
         }
     }
 
