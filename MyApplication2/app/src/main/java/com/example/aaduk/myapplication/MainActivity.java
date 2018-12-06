@@ -19,11 +19,13 @@ import android.os.Bundle;
 import android.telephony.SmsManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -34,6 +36,7 @@ import android.view.View;
 import android.hardware.*;
 import android.content.Context;
 import android.widget.VideoView;
+import android.view.Surface;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -43,12 +46,13 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import static android.provider.AlarmClock.EXTRA_MESSAGE;
 import static com.google.android.gms.location.LocationServices.getFusedLocationProviderClient;
 
-public class MainActivity extends AppCompatActivity implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener {
+public class MainActivity extends AppCompatActivity implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, SensorEventListener {
 
 
     static final int REQUEST_VIDEO_CAPTURE = 1;
     private GestureDetectorCompat gd;
     private SensorManager sm;
+    private SensorManager mSensorManager;
     private float acelValue;
     private float acelLast;
     private float shake;
@@ -65,6 +69,10 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
     private TextView panicMessage;
     private FusedLocationProviderClient locationClient;
     private VideoView mVideoView;
+    private int gyro=0;
+    private Sensor sensor;
+
+
 
 
     @Override
@@ -102,9 +110,89 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
         acelLast = SensorManager.GRAVITY_EARTH;
         shake = 0.00f;
 
+        SensorEventListener rvListener;
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        sensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+
+        rvListener = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent sensorEvent) {
+
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int i) {
+                //unused
+            }
+        };
+
+        mSensorManager.registerListener(rvListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR), SensorManager.SENSOR_DELAY_NORMAL);
+
 
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        //unregister Sensor listener
+        mSensorManager.unregisterListener(this);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        float[] rotationMatrix = new float[16];
+        SensorManager.getRotationMatrixFromVector(
+                rotationMatrix, sensorEvent.values);
+
+        // Remap coordinate system
+        float[] remappedRotationMatrix = new float[16];
+        SensorManager.remapCoordinateSystem(rotationMatrix,
+                SensorManager.AXIS_X,
+                SensorManager.AXIS_Z,
+                remappedRotationMatrix);
+
+        // Convert to orientations
+        float[] orientations = new float[3];
+        SensorManager.getOrientation(remappedRotationMatrix, orientations);
+
+        for(int i = 0; i < 3; i++) {
+            orientations[i] = (float)(Math.toDegrees(orientations[i]));
+        }
+
+        if(orientations[2] > 45) {
+            if(gyro==0||gyro==2||gyro==4)
+            {
+                gyro=gyro+1;
+
+            }
+
+        } else if(orientations[2] < -45) {
+            if(gyro==1||gyro==3||gyro==5)
+            {
+                gyro=gyro+1;
+
+            }
+            else if (gyro==6)
+            {
+                gyro=0;
+                takeVideo();
+            }
+
+        } else if(Math.abs(orientations[2]) < 10) {
+
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        //unused
+    }
 
 
     private void takeVideo() {
@@ -128,7 +216,8 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
             shake = shake * 0.5f + d;
 
             if(shake > 20) {
-                 sendMessage();
+                sendMessage();
+                gyro=0;
             }
 
         }
